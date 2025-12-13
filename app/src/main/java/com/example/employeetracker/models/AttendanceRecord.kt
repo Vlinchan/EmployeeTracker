@@ -2,6 +2,7 @@ package com.example.employeetracker.models
 
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import java.util.Date
 
@@ -14,7 +15,8 @@ import java.util.Date
             childColumns = ["employeeId"],
             onDelete = ForeignKey.CASCADE
         )
-    ]
+    ],
+    indices = [Index(value = ["employeeId"])] // ✅ ADDED INDEX for foreign key
 )
 data class AttendanceRecord(
     @PrimaryKey(autoGenerate = true)

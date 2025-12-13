@@ -8,12 +8,12 @@ plugins {
 
 android {
     namespace = "com.example.employeetracker"
-    compileSdk = 36
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.employeetracker"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -43,7 +43,6 @@ android {
         compose = true
     }
     composeOptions {
-        // This version (1.5.8) is strictly required for Kotlin 1.9.22
         kotlinCompilerExtensionVersion = "1.5.8"
     }
     packaging {
@@ -60,11 +59,11 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
 
-    // Firebase (Downgraded to be compatible with Kotlin 1.9.22)
+    // Firebase
     implementation(platform("com.google.firebase:firebase-bom:32.8.1"))
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth")
-    implementation("com.google.firebase:firebase-database") // Changed from firestore
+    implementation("com.google.firebase:firebase-database")
 
     // UI & Material 3
     implementation(libs.androidx.ui)
@@ -81,13 +80,10 @@ dependencies {
     // ViewModel
     implementation(libs.androidx.lifecycle.viewmodel.compose)
 
-    // Vico Charts (Version 1.16.0)
+    // ✅ Vico Charts - Now using version catalog (2.0.0-alpha.28)
     implementation(libs.vico.compose)
     implementation(libs.vico.compose.m3)
     implementation(libs.vico.core)
-    implementation("com.patrykandpatrick.vico:compose:2.0.0-alpha.28")
-    implementation("com.patrykandpatrick.vico:compose-m3:2.0.0-alpha.28")
-    implementation("com.patrykandpatrick.vico:core:2.0.0-alpha.28")
 
     // DataStore & Gson
     implementation(libs.androidx.datastore.preferences)

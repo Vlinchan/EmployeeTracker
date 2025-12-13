@@ -2,6 +2,7 @@ package com.example.employeetracker.models
 
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(
@@ -13,12 +14,13 @@ import androidx.room.PrimaryKey
             childColumns = ["employeeId"],
             onDelete = ForeignKey.CASCADE
         )
-    ]
+    ],
+    indices = [Index(value = ["employeeId"])] // ✅ ADDED INDEX for foreign key
 )
 data class Task(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val title: String,
-    val employeeId: Long, // Changed from assignedTo: String
+    val employeeId: Long,
     var isCompleted: Boolean = false
 )

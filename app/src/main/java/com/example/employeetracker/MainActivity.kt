@@ -7,11 +7,16 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.employeetracker.data.ThemeDataStore
+import com.example.employeetracker.employeesection.EmployeeDashboardViewModel
+import com.example.employeetracker.employeesection.EmployeeSelectionScreen
 import com.example.employeetracker.employeesection.EmployeeSec
 import com.example.employeetracker.screens.ChangePasswordScreen
 import com.example.employeetracker.screens.SettingsScreen
@@ -43,8 +48,7 @@ class MainActivity : ComponentActivity() {
 
                 NavHost(
                     navController = navController,
-                    startDestination =
-                        if (loginState is LoginState.Success) "dashboard" else "login"
+                    startDestination = if (loginState is LoginState.Success) "dashboard" else "login"
                 ) {
 
                     // LOGIN SCREEN
@@ -56,11 +60,33 @@ class MainActivity : ComponentActivity() {
                                 }
                             },
                             onEmployeeLoginSuccess = {
-                                navController.navigate("employee_section") {
+                                navController.navigate("employee_selection") {
                                     popUpTo("login") { inclusive = true }
                                 }
                             }
                         )
+                    }
+
+                    // EMPLOYEE SELECTION SCREEN (NEW!)
+                    composable("employee_selection") {
+                        EmployeeSelectionScreen(
+                            onEmployeeSelected = { employeeId ->
+                                navController.navigate("employee_dashboard/$employeeId") {
+                                    popUpTo("employee_selection") { inclusive = true }
+                                }
+                            }
+                        )
+                    }
+
+                    // EMPLOYEE DASHBOARD (NEW!)
+                    composable("employee_dashboard/{employeeId}") { backStackEntry ->
+                        val employeeId = backStackEntry.arguments?.getString("employeeId")?.toLongOrNull() ?: 1L
+                        val employeeViewModel: EmployeeDashboardViewModel = hiltViewModel()
+
+                        // Set the employee ID in the ViewModel
+                        employeeViewModel.setEmployeeId(employeeId)
+
+                        EmployeeSec(viewModel = employeeViewModel)
                     }
 
                     // ADMIN DASHBOARD
@@ -110,11 +136,6 @@ class MainActivity : ComponentActivity() {
                             userViewModel = userViewModel,
                             onBack = { navController.popBackStack() }
                         )
-                    }
-
-                    // EMPLOYEE SECTION
-                    composable("employee_section") {
-                        EmployeeSec()
                     }
                 }
             }

@@ -1,5 +1,5 @@
 [versions]
-agp = "8.3.2"
+agp = "8.7.3"
 kotlin = "1.9.22"
 coreKtx = "1.12.0"
 junit = "4.13.2"
@@ -9,7 +9,7 @@ lifecycleRuntimeKtx = "2.7.0"
 activityCompose = "1.8.2"
 composeBom = "2024.02.00"
 room = "2.6.1"
-vico = "1.16.0"
+vico = "1.13.1"  # ✅ STABLE VERSION (not alpha)
 ksp = "1.9.22-1.0.17"
 gson = "2.10.1"
 datastore = "1.0.0"
@@ -43,7 +43,7 @@ androidx-room-runtime = { group = "androidx.room", name = "room-runtime", versio
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 
-# Vico Charts
+# Vico Charts (Stable Version 1.13.1)
 vico-compose = { group = "com.patrykandpatrick.vico", name = "compose", version.ref = "vico" }
 vico-compose-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico" }
 vico-core = { group = "com.patrykandpatrick.vico", name = "core", version.ref = "vico" }

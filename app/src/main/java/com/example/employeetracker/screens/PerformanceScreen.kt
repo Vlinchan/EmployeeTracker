@@ -29,7 +29,7 @@ import com.example.employeetracker.ui.theme.VividOrange
 import com.example.employeetracker.viewmodels.PerformanceUiState
 import com.example.employeetracker.viewmodels.PerformanceViewModel
 
-// --- VICO IMPORTS (Fixed for v2.0+) ---
+// --- COMPLETE VICO 2.0 IMPORTS ---
 import com.patrykandpatrick.vico.compose.axis.horizontal.rememberBottomAxis
 import com.patrykandpatrick.vico.compose.axis.vertical.rememberStartAxis
 import com.patrykandpatrick.vico.compose.chart.Chart
@@ -38,6 +38,7 @@ import com.patrykandpatrick.vico.compose.chart.line.lineChart
 import com.patrykandpatrick.vico.compose.chart.line.lineSpec
 import com.patrykandpatrick.vico.compose.component.lineComponent
 import com.patrykandpatrick.vico.compose.component.overlayingComponent
+import com.patrykandpatrick.vico.compose.component.shape.dashedShape
 import com.patrykandpatrick.vico.compose.component.shape.shader.verticalGradient
 import com.patrykandpatrick.vico.compose.component.shapeComponent
 import com.patrykandpatrick.vico.compose.component.textComponent
@@ -45,12 +46,11 @@ import com.patrykandpatrick.vico.compose.dimensions.dimensionsOf
 import com.patrykandpatrick.vico.core.axis.AxisPosition
 import com.patrykandpatrick.vico.core.axis.formatter.AxisValueFormatter
 import com.patrykandpatrick.vico.core.component.marker.MarkerComponent
-import com.patrykandpatrick.vico.core.component.shape.DashedShape
 import com.patrykandpatrick.vico.core.component.shape.ShapeComponent
 import com.patrykandpatrick.vico.core.component.shape.Shapes
 import com.patrykandpatrick.vico.core.marker.Marker
 
-// Define colors locally if not available in theme
+// Define colors
 val ChartPrimary = Color(0xFF6366F1)
 val BackgroundGray = Color(0xFFF8FAFC)
 
@@ -204,7 +204,7 @@ fun PerformanceContent(
                             )
                         )
                     ),
-                    model = uiState.statusChartModel!!, // Force unwrapped as we checked null
+                    model = uiState.statusChartModel!!,
                     startAxis = rememberStartAxis(),
                     bottomAxis = rememberBottomAxis(valueFormatter = horizontalAxisValueFormatter),
                     marker = rememberMarker(),
@@ -221,7 +221,6 @@ fun PerformanceContent(
                         lines = listOf(
                             lineSpec(
                                 lineColor = ChartPrimary,
-                                // FIXED: Using DynamicShaders
                                 lineBackgroundShader = verticalGradient(
                                     arrayOf(ChartPrimary.copy(alpha = 0.4f), ChartPrimary.copy(alpha = 0.0f))
                                 )
@@ -263,7 +262,13 @@ fun GraphCard(title: String, subtitle: String? = null, content: @Composable () -
 }
 
 @Composable
-fun KpiCard(title: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color, modifier: Modifier = Modifier) {
+fun KpiCard(
+    title: String,
+    value: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -286,7 +291,12 @@ fun KpiCard(title: String, value: String, icon: androidx.compose.ui.graphics.vec
                 Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
             }
             Spacer(modifier = Modifier.height(12.dp))
-            Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
+            Text(
+                value,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
             Text(title, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
         }
     }
@@ -340,12 +350,11 @@ fun PriorityBar(label: String, progress: Float, color: Color) {
     }
 }
 
-// --- FIXED MARKER IMPLEMENTATION ---
+// --- Marker Implementation ---
 @Composable
 fun rememberMarker(): Marker {
     val labelBackgroundColor = MaterialTheme.colorScheme.surface
 
-    // FIXED: ShapeComponent constructor usage
     val labelBackground = remember(labelBackgroundColor) {
         ShapeComponent(Shapes.pillShape, labelBackgroundColor.toArgb()).setShadow(
             radius = 4f, dy = 2f, applyElevationOverlay = true
@@ -375,11 +384,11 @@ fun rememberMarker(): Marker {
 
     val guideline = lineComponent(
         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
-        2.dp,
-        DashedShape(
-            Shapes.pillShape,
-            10.dp.value,
-            5.dp.value
+        thickness = 2.dp,
+        shape = Shapes.dashedShape(
+            shape = Shapes.pillShape,
+            dashLength = 4.dp,
+            gapLength = 8.dp
         )
     )
 

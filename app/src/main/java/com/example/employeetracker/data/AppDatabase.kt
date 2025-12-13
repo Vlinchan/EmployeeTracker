@@ -7,7 +7,11 @@ import com.example.employeetracker.models.AttendanceRecord
 import com.example.employeetracker.models.Employee
 import com.example.employeetracker.models.Task
 
-@Database(entities = [Employee::class, AttendanceRecord::class, Task::class], version = 5, exportSchema = false)
+@Database(
+    entities = [Employee::class, AttendanceRecord::class, Task::class],
+    version = 6, // ✅ INCREMENTED from 5 to 6 due to schema change (added indexes)
+    exportSchema = false
+)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
