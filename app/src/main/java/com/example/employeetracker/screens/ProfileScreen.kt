@@ -1,6 +1,5 @@
 package com.example.employeetracker.screens
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -19,36 +18,45 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.employeetracker.R
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.employeetracker.viewmodels.EmployeeViewModel
+import com.example.employeetracker.viewmodels.TaskViewModel
 import com.example.employeetracker.viewmodels.UserViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
-    userViewModel: UserViewModel = viewModel(),
+    userViewModel: UserViewModel = hiltViewModel(),
+    employeeViewModel: EmployeeViewModel = hiltViewModel(),
+    taskViewModel: TaskViewModel = hiltViewModel(),
     onBack: () -> Unit,
     onTeamOverviewClick: () -> Unit,
     onDirectReportsClick: () -> Unit,
     onPendingReviewsClick: () -> Unit,
     onFeedbackRequestsClick: () -> Unit,
-    onPersonalSettingsClick: () -> Unit, // Maps to SettingsScreen
+    onPersonalSettingsClick: () -> Unit,
     onLogout: () -> Unit
 ) {
     val userName by userViewModel.userName.collectAsState()
+    val employees by employeeViewModel.allEmployees.collectAsState()
+    val tasks by taskViewModel.allTasks.collectAsState()
+
     var isEditing by remember { mutableStateOf(false) }
     var tempUserName by remember { mutableStateOf(userName) }
-
-    // --- State for "Workable" Dialogs ---
-    var showTeamStatsDialog by remember { mutableStateOf(false) }
-    var showReviewDialog by remember { mutableStateOf(false) }
-    var showGoalsDialog by remember { mutableStateOf(false) }
     var showLogoutConfirm by remember { mutableStateOf(false) }
+
+    // Calculate real statistics from database
+    val totalEmployees = employees.size
+    val avgPerformance = if (employees.isNotEmpty()) {
+        (employees.sumOf { it.performance.toDouble() } / employees.size * 100).toInt()
+    } else 0
+
+    val totalTasks = tasks.size
+    val completedTasks = tasks.count { it.isCompleted }
+    val pendingTasks = totalTasks - completedTasks
 
     LaunchedEffect(userName) {
         tempUserName = userName
@@ -82,7 +90,7 @@ fun ProfileScreen(
         ) {
             Spacer(modifier = Modifier.height(8.dp))
 
-            // --- 1. HEADER SECTION (Avatar & Name) ---
+            // --- 1. HEADER SECTION ---
             Card(
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
                 shape = RoundedCornerShape(24.dp),
@@ -94,7 +102,7 @@ fun ProfileScreen(
                         .padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Avatar with Ring
+                    // Avatar
                     Box(
                         modifier = Modifier
                             .size(110.dp)
@@ -102,19 +110,21 @@ fun ProfileScreen(
                             .background(MaterialTheme.colorScheme.primaryContainer),
                         contentAlignment = Alignment.Center
                     ) {
-                        // Use a default icon if you don't have a real image resource handy,
-                        // or keep your R.drawable.ic_launcher_background
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Profile",
-                            modifier = Modifier.size(60.dp),
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        val initials = userName.split(" ")
+                            .mapNotNull { it.firstOrNull() }
+                            .take(2)
+                            .joinToString("")
+                        Text(
+                            initials,
+                            fontSize = 36.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Editable Name Logic
+                    // Editable Name
                     if (isEditing) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             OutlinedTextField(
@@ -145,7 +155,7 @@ fun ProfileScreen(
                         }
                     }
                     Text(
-                        text = "Senior Engineering Manager",
+                        text = "Admin Manager",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -154,57 +164,80 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- 2. MY TEAM SECTION ---
+            // --- 2. STATISTICS CARD (From Real Database) ---
+            Card(
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Text(
+                        "Team Overview",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        StatBadge(totalEmployees.toString(), "Employees")
+                        StatBadge("$avgPerformance%", "Avg Rating")
+                        StatBadge(completedTasks.toString(), "Tasks Done")
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // --- 3. MY TEAM SECTION ---
             ProfileSectionHeader("MY TEAM")
 
-            // "Team Overview" -> Triggers Dialog
             ProfileRow(
                 icon = Icons.Default.Groups,
                 title = "Team Overview",
-                subtitle = "12 Direct Reports",
-                onClick = { showTeamStatsDialog = true }
+                subtitle = "$totalEmployees Active Members",
+                onClick = onTeamOverviewClick
             )
 
-            // "Direct Reports" -> Triggers Navigation Callback
             ProfileRow(
                 icon = Icons.Default.Face,
                 title = "Direct Reports",
-                subtitle = "View individual profiles",
+                subtitle = "View all employees",
                 onClick = onDirectReportsClick
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- 3. MANAGEMENT TASKS ---
-            ProfileSectionHeader("MANAGEMENT TASKS")
+            // --- 4. TASKS ---
+            ProfileSectionHeader("MANAGEMENT")
 
-            // "Pending Reviews" -> Triggers Dialog (simulated work)
             ProfileRow(
                 icon = Icons.Default.PendingActions,
-                title = "Pending Reviews",
-                subtitle = "3 reviews due this week",
-                trailingHighlight = "3",
-                onClick = { showReviewDialog = true }
+                title = "Pending Tasks",
+                subtitle = "$pendingTasks tasks remaining",
+                trailingHighlight = if (pendingTasks > 0) pendingTasks.toString() else null,
+                onClick = onPendingReviewsClick
             )
 
-            // "Goal Approvals" -> Triggers Dialog
             ProfileRow(
-                icon = Icons.Default.TrackChanges,
-                title = "Goal Approvals",
-                subtitle = "Q1 Objectives",
-                onClick = { showGoalsDialog = true }
+                icon = Icons.Default.CheckCircle,
+                title = "Completed Tasks",
+                subtitle = "$completedTasks tasks finished",
+                onClick = onPendingReviewsClick
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- 4. SETTINGS & LOGOUT ---
+            // --- 5. SETTINGS & LOGOUT ---
             ProfileSectionHeader("SYSTEM")
 
             ProfileRow(
                 icon = Icons.Default.Settings,
                 title = "App Settings",
                 subtitle = "Notifications, Password, Theme",
-                onClick = onPersonalSettingsClick // Navigate to the SettingsScreen we built before
+                onClick = onPersonalSettingsClick
             )
 
             ProfileRow(
@@ -217,46 +250,7 @@ fun ProfileScreen(
             Spacer(modifier = Modifier.height(40.dp))
         }
 
-        // --- DIALOGS (To make the screen "Workable") ---
-
-        // 1. Team Stats Dialog
-        if (showTeamStatsDialog) {
-            ProfileDialog(title = "Team Overview", onDismiss = { showTeamStatsDialog = false }) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    StatBadge("12", "Members")
-                    StatBadge("92%", "Performance")
-                    StatBadge("4", "Promotions")
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                LinearProgressIndicator(
-                    progress = { 0.8f },
-                    modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
-                )
-                Text("Team Goal Completion", style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 8.dp))
-            }
-        }
-
-        // 2. Pending Reviews Dialog
-        if (showReviewDialog) {
-            ProfileDialog(title = "Pending Reviews", onDismiss = { showReviewDialog = false }) {
-                ReviewItem("Sarah Jenkins", "Mid-Year Review", "Due in 2 days")
-                ReviewItem("Mike Ross", "Probation Review", "Overdue")
-                ReviewItem("Jessica Pearson", "Annual Review", "Due in 5 days")
-            }
-        }
-
-        // 3. Goal Approvals Dialog
-        if (showGoalsDialog) {
-            ProfileDialog(title = "Goal Approvals", onDismiss = { showGoalsDialog = false }) {
-                Text("The following employees have submitted goals for approval:", style = MaterialTheme.typography.bodyMedium)
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = { showGoalsDialog = false }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Approve All (2 Pending)")
-                }
-            }
-        }
-
-        // 4. Logout Confirmation
+        // Logout Confirmation
         if (showLogoutConfirm) {
             AlertDialog(
                 onDismissRequest = { showLogoutConfirm = false },
@@ -319,7 +313,6 @@ fun ProfileRow(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Icon Container
             Surface(
                 shape = RoundedCornerShape(8.dp),
                 color = if (isDestructive) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,
@@ -379,61 +372,18 @@ fun ProfileRow(
 }
 
 @Composable
-fun ProfileDialog(
-    title: String,
-    onDismiss: () -> Unit,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(24.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, null)
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                content()
-            }
-        }
-    }
-}
-
-@Composable
 fun StatBadge(value: String, label: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-@Composable
-fun ReviewItem(name: String, type: String, status: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.tertiaryContainer, modifier = Modifier.size(32.dp)) {
-            Box(contentAlignment = Alignment.Center) {
-                Text(name.first().toString(), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onTertiaryContainer)
-            }
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(name, fontWeight = FontWeight.Bold)
-            Text(type, style = MaterialTheme.typography.bodySmall)
-        }
-        Text(status, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+        Text(
+            value,
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+        )
     }
 }
