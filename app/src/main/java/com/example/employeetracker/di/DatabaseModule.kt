@@ -4,9 +4,12 @@ import android.content.Context
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.example.employeetracker.data.ActivityDao
 import com.example.employeetracker.data.AppDatabase
 import com.example.employeetracker.data.EmployeeDao
 import com.example.employeetracker.data.TaskDao
+import com.example.employeetracker.models.Activity
+import com.example.employeetracker.models.ActivityType
 import com.example.employeetracker.models.Employee
 import com.example.employeetracker.models.Task
 import dagger.Module
@@ -28,9 +31,9 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(
         @ApplicationContext context: Context,
-        // Use a provider to break the circular dependency between the database and the DAOs inside the callback.
         employeeDaoProvider: Provider<EmployeeDao>,
-        taskDaoProvider: Provider<TaskDao>
+        taskDaoProvider: Provider<TaskDao>,
+        activityDaoProvider: Provider<ActivityDao> // ✅ NEW
     ): AppDatabase {
         return Room.databaseBuilder(
             context.applicationContext,
@@ -42,7 +45,9 @@ object DatabaseModule {
                 CoroutineScope(Dispatchers.IO).launch {
                     val employeeDao = employeeDaoProvider.get()
                     val taskDao = taskDaoProvider.get()
+                    val activityDao = activityDaoProvider.get() // ✅ NEW
 
+                    // Insert sample employees
                     employeeDao.insertEmployee(Employee(name = "Test Employee", email = "test@example.com", designation = "Tester", department = "QA", phoneNumber = "555-555-5555", performance = 0.5f, rating = 3))
                     employeeDao.insertEmployee(Employee(name = "John Doe", email = "john.d@example.com", designation = "Android Developer", department = "Mobile", phoneNumber = "123-456-7890", performance = 0.9f, rating = 5))
                     employeeDao.insertEmployee(Employee(name = "Jane Smith", email = "jane.s@example.com", designation = "iOS Developer", department = "Mobile", phoneNumber = "123-456-7891", performance = 0.8f, rating = 4))
@@ -55,11 +60,13 @@ object DatabaseModule {
                     employeeDao.insertEmployee(Employee(name = "Michael Wilson", email = "michael.w@example.com", designation = "Software Engineer", department = "Engineering", phoneNumber = "123-456-7898", performance = 0.78f, rating = 3))
                     employeeDao.insertEmployee(Employee(name = "Barbara Moore", email = "barbara.m@example.com", designation = "Product Manager", department = "Management", phoneNumber = "123-456-7899", performance = 0.93f, rating = 5))
 
+                    // Get employees for task assignment
                     val testEmployee = employeeDao.getEmployeeByName("Test Employee")
                     val johnDoe = employeeDao.getEmployeeByName("John Doe")
                     val janeSmith = employeeDao.getEmployeeByName("Jane Smith")
                     val peterJones = employeeDao.getEmployeeByName("Peter Jones")
 
+                    // Insert sample tasks
                     if(testEmployee != null) {
                         taskDao.insertTask(Task(title = "Review test plan", employeeId = testEmployee.id))
                     }
@@ -75,6 +82,32 @@ object DatabaseModule {
                         taskDao.insertTask(Task(title = "Update website", employeeId = peterJones.id))
                         taskDao.insertTask(Task(title = "Test new feature", employeeId = peterJones.id, isCompleted = true))
                     }
+
+                    // ✅ Insert sample activities
+                    activityDao.insertActivity(
+                        Activity(
+                            title = "John Doe joined the team",
+                            description = "New Android Developer onboarded",
+                            type = ActivityType.EMPLOYEE_ADDED,
+                            relatedEmployeeId = johnDoe?.id
+                        )
+                    )
+                    activityDao.insertActivity(
+                        Activity(
+                            title = "Jane completed design mockup",
+                            description = "Task marked as completed",
+                            type = ActivityType.TASK_COMPLETED,
+                            relatedEmployeeId = janeSmith?.id
+                        )
+                    )
+                    activityDao.insertActivity(
+                        Activity(
+                            title = "Mary's performance updated",
+                            description = "Performance rating increased to 95%",
+                            type = ActivityType.PERFORMANCE_UPDATED,
+                            relatedEmployeeId = employeeDao.getEmployeeByName("Mary Johnson")?.id
+                        )
+                    )
                 }
             }
         }).fallbackToDestructiveMigration().build()
@@ -88,4 +121,7 @@ object DatabaseModule {
 
     @Provides
     fun provideEmployeeDao(database: AppDatabase): EmployeeDao = database.employeeDao()
+
+    @Provides
+    fun provideActivityDao(database: AppDatabase): ActivityDao = database.activityDao() // ✅ NEW
 }

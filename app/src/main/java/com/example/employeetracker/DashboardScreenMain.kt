@@ -38,6 +38,11 @@ import com.example.employeetracker.viewmodels.EmployeeViewModel
 import com.example.employeetracker.viewmodels.TaskViewModel
 import com.example.employeetracker.viewmodels.UserViewModel
 import kotlinx.coroutines.launch
+import com.example.employeetracker.data.repository.ActivityRepository
+import androidx.lifecycle.ViewModel
+import javax.inject.Inject
+import dagger.hilt.android.lifecycle.HiltViewModel
+
 
 fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
@@ -126,6 +131,10 @@ fun DashboardScreenMain(
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
+    val activityRepository: ActivityRepository = hiltViewModel<ActivityViewModel>().repository
+    val activities by activityRepository.getRecentActivities().collectAsState(initial = emptyList())
+
+
     val context = LocalContext.current
     val activity = context.findActivity()
 
@@ -206,6 +215,7 @@ fun DashboardScreenMain(
                         modifier = Modifier.padding(paddingValues),
                         employees = employees,
                         tasks = tasks,
+                        activities = activities, // ✅ ADD THIS LINE
                         onGoToEmployeesScreen = { selectedScreen = DashboardScreen.Employees },
                         onGoToRecentActivityScreen = { selectedScreen = DashboardScreen.RecentActivity },
                         onEmployeeClick = { employee -> selectedScreen = DashboardScreen.EmployeeDetail(employee) }
@@ -275,3 +285,7 @@ fun DashboardScreenMain(
         }
     }
 }
+@HiltViewModel
+class ActivityViewModel @Inject constructor(
+    val repository: ActivityRepository
+) : ViewModel()

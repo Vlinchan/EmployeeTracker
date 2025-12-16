@@ -19,37 +19,29 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.employeetracker.models.Activity
+import com.example.employeetracker.models.ActivityType
 import com.example.employeetracker.models.Employee
 import com.example.employeetracker.models.Task
+import com.example.employeetracker.data.repository.ActivityRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-
-// --- Data Classes (Kept same) ---
-data class Kpi(val title: String, val value: String, val change: String, val icon: ImageVector)
-data class ActivityItem(val title: String, val time: String, val type: String)
-
-// --- Updated Sample Data with Icons ---
-val kpisSample = listOf(
-    Kpi("Performance", "92%", "+2.4%", Icons.Default.TrendingUp),
-    Kpi("Attendance", "98%", "+0.3%", Icons.Default.Schedule),
-    Kpi("Tasks Done", "124", "+8", Icons.Default.CheckCircle),
-    Kpi("Avg Rating", "4.7", "+0.1", Icons.Default.Star)
-)
-
-val activitiesSample = listOf(
-    ActivityItem("John submitted Q3 report", "2h ago", "Doc"),
-    ActivityItem("New hire onboarded", "6h ago", "User"),
-    ActivityItem("Performance review set", "1d ago", "Event"),
-    ActivityItem("Payroll updated", "2d ago", "Money")
-)
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TopAppBarDashboard(scope: CoroutineScope, drawerState: DrawerState, onProfileClick: () -> Unit, onNotificationClick: () -> Unit) {
+fun TopAppBarDashboard(
+    scope: CoroutineScope,
+    drawerState: DrawerState,
+    onProfileClick: () -> Unit,
+    onNotificationClick: () -> Unit
+) {
     CenterAlignedTopAppBar(
-        title = {
-            Text("Dashboard", fontWeight = FontWeight.Bold)
-        },
+        title = { Text("Dashboard", fontWeight = FontWeight.Bold) },
         navigationIcon = {
             IconButton(onClick = { scope.launch { drawerState.open() } }) {
                 Icon(Icons.Default.Menu, contentDescription = "Menu")
@@ -60,7 +52,6 @@ fun TopAppBarDashboard(scope: CoroutineScope, drawerState: DrawerState, onProfil
                 Icon(Icons.Default.Notifications, contentDescription = "Notifications")
             }
             IconButton(onClick = onProfileClick) {
-                // Vibrant Avatar Placeholder
                 Box(
                     modifier = Modifier
                         .size(38.dp)
@@ -68,7 +59,12 @@ fun TopAppBarDashboard(scope: CoroutineScope, drawerState: DrawerState, onProfil
                         .background(MaterialTheme.colorScheme.primaryContainer),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("ET", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Text(
+                        "ET",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
                 }
             }
         },
@@ -104,6 +100,7 @@ fun OverviewPage(
     modifier: Modifier = Modifier,
     employees: List<Employee>,
     tasks: List<Task>,
+    activities: List<Activity> = emptyList(), // ✅ NEW: Real activities from database
     onGoToEmployeesScreen: () -> Unit,
     onGoToRecentActivityScreen: () -> Unit,
     onEmployeeClick: (Employee) -> Unit
@@ -122,22 +119,28 @@ fun OverviewPage(
         tasks
     }
 
-    // Main Content
+    // Calculate real KPIs from database
+    val avgPerformance = if (employees.isNotEmpty()) {
+        (employees.sumOf { it.performance.toDouble() } / employees.size * 100).toInt()
+    } else 0
+
+    val completedTasks = tasks.count { it.isCompleted }
+    val avgRating = if (employees.isNotEmpty()) {
+        (employees.sumOf { it.rating.toDouble() } / employees.size)
+    } else 0.0
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background) // Vital for the "Ice Blue" look
+            .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
         contentPadding = PaddingValues(top = 16.dp, bottom = 32.dp)
     ) {
 
-        // 1. Search Bar (Fixed Visibility)
+        // 1. Search Bar
         item {
-            SearchBar(
-                query = searchQuery,
-                onQueryChange = { searchQuery = it }
-            )
+            SearchBar(query = searchQuery, onQueryChange = { searchQuery = it })
         }
 
         // 2. Dashboard Widgets (Only when not searching)
@@ -145,27 +148,69 @@ fun OverviewPage(
             item {
                 SectionTitle("Overview", null)
                 Spacer(modifier = Modifier.height(8.dp))
-                // Grid of KPIs
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        KpiCard(kpisSample[0], Modifier.weight(1f))
-                        KpiCard(kpisSample[1], Modifier.weight(1f))
+                        RealKpiCard(
+                            title = "Performance",
+                            value = "$avgPerformance%",
+                            icon = Icons.Default.TrendingUp,
+                            modifier = Modifier.weight(1f)
+                        )
+                        RealKpiCard(
+                            title = "Employees",
+                            value = "${employees.size}",
+                            icon = Icons.Default.People,
+                            modifier = Modifier.weight(1f)
+                        )
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        KpiCard(kpisSample[2], Modifier.weight(1f))
-                        KpiCard(kpisSample[3], Modifier.weight(1f))
+                        RealKpiCard(
+                            title = "Tasks Done",
+                            value = "$completedTasks",
+                            icon = Icons.Default.CheckCircle,
+                            modifier = Modifier.weight(1f)
+                        )
+                        RealKpiCard(
+                            title = "Avg Rating",
+                            value = String.format("%.1f", avgRating),
+                            icon = Icons.Default.Star,
+                            modifier = Modifier.weight(1f)
+                        )
                     }
                 }
             }
 
             item { SectionTitle("Top Performers", onViewAllClick = onGoToEmployeesScreen) }
-            items(filteredEmployees.take(5)) { employee -> // Limit to top 5 for overview
+            items(filteredEmployees.sortedByDescending { it.performance }.take(5)) { employee ->
                 EmployeeProgressItem(emp = employee, onClick = { onEmployeeClick(employee) })
             }
 
+            // ✅ Real Recent Activity from Database
             item { SectionTitle("Recent Activity", onViewAllClick = onGoToRecentActivityScreen) }
-            items(activitiesSample) { activity ->
-                RecentActivityItem(item = activity)
+            items(activities.take(5)) { activity ->
+                RealActivityItem(activity = activity)
+            }
+
+            if (activities.isEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        Box(
+                            modifier = Modifier.padding(32.dp).fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "No recent activity",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
             }
         } else {
             // 3. Search Results
@@ -184,15 +229,21 @@ fun OverviewPage(
             if (filteredEmployees.isEmpty() && filteredTasks.isEmpty()) {
                 item {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 48.dp),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.SearchOff, contentDescription = null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(48.dp))
+                            Icon(
+                                Icons.Default.SearchOff,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.outline,
+                                modifier = Modifier.size(48.dp)
+                            )
                             Spacer(Modifier.height(8.dp))
-                            Text("No results found for \"$searchQuery\"", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                "No results found for \"$searchQuery\"",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
@@ -201,52 +252,106 @@ fun OverviewPage(
     }
 }
 
-// --- UPDATED UI COMPONENTS ---
-
+// ✅ NEW: Real Activity Item with database data
 @Composable
-fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
-    OutlinedTextField(
-        value = query,
-        onValueChange = onQueryChange,
-        placeholder = { Text("Search employees, tasks...") },
-        leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = MaterialTheme.colorScheme.primary) },
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp), // More modern roundness
-        singleLine = true,
-        colors = OutlinedTextFieldDefaults.colors(
-            // THE FIX: Use surfaceVariant so it stands out against the background
-            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = Color.Transparent, // Clean look without border when not focused
-            cursorColor = MaterialTheme.colorScheme.primary
-        )
-    )
+fun RealActivityItem(activity: Activity) {
+    val icon = when (activity.type) {
+        ActivityType.EMPLOYEE_ADDED -> Icons.Default.PersonAdd
+        ActivityType.EMPLOYEE_UPDATED -> Icons.Default.Edit
+        ActivityType.TASK_CREATED -> Icons.Default.AddTask
+        ActivityType.TASK_COMPLETED -> Icons.Default.CheckCircle
+        ActivityType.ATTENDANCE_MARKED -> Icons.Default.EventAvailable
+        ActivityType.PERFORMANCE_UPDATED -> Icons.Default.TrendingUp
+    }
+
+    val iconColor = when (activity.type) {
+        ActivityType.EMPLOYEE_ADDED -> Color(0xFF00C853)
+        ActivityType.TASK_COMPLETED -> Color(0xFF00C853)
+        ActivityType.PERFORMANCE_UPDATED -> Color(0xFF6200EA)
+        ActivityType.TASK_CREATED -> Color(0xFF2196F3)
+        ActivityType.ATTENDANCE_MARKED -> Color(0xFFFFAB00)
+        ActivityType.EMPLOYEE_UPDATED -> Color(0xFF757575)
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = iconColor.copy(alpha = 0.1f),
+                modifier = Modifier.size(40.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = iconColor,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = activity.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = getTimeAgo(activity.timestamp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
 }
 
+// Helper function to get "time ago" format
+fun getTimeAgo(date: Date): String {
+    val now = Date()
+    val diff = now.time - date.time
+
+    return when {
+        diff < TimeUnit.MINUTES.toMillis(1) -> "Just now"
+        diff < TimeUnit.HOURS.toMillis(1) -> "${TimeUnit.MILLISECONDS.toMinutes(diff)}m ago"
+        diff < TimeUnit.DAYS.toMillis(1) -> "${TimeUnit.MILLISECONDS.toHours(diff)}h ago"
+        diff < TimeUnit.DAYS.toMillis(7) -> "${TimeUnit.MILLISECONDS.toDays(diff)}d ago"
+        else -> SimpleDateFormat("MMM dd", Locale.getDefault()).format(date)
+    }
+}
+
+// ✅ Real KPI Card with actual data
 @Composable
-fun KpiCard(kpi: Kpi, modifier: Modifier = Modifier) {
+fun RealKpiCard(
+    title: String,
+    value: String,
+    icon: ImageVector,
+    modifier: Modifier = Modifier
+) {
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            // Header: Icon + Title
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = kpi.icon,
+                    imageVector = icon,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = kpi.title,
+                    text = title,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -254,34 +359,40 @@ fun KpiCard(kpi: Kpi, modifier: Modifier = Modifier) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Value + Change
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Bottom
-            ) {
-                Text(
-                    text = kpi.value,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(6.dp)
-                ) {
-                    Text(
-                        text = kpi.change,
-                        color = MaterialTheme.colorScheme.primary,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
-                }
-            }
+            Text(
+                text = value,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
         }
     }
+}
+
+@Composable
+fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        placeholder = { Text("Search employees, tasks...") },
+        leadingIcon = {
+            Icon(
+                Icons.Default.Search,
+                contentDescription = "Search",
+                tint = MaterialTheme.colorScheme.primary
+            )
+        },
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        singleLine = true,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = Color.Transparent,
+            cursorColor = MaterialTheme.colorScheme.primary
+        )
+    )
 }
 
 @Composable
@@ -296,7 +407,6 @@ fun EmployeeProgressItem(emp: Employee, onDelete: (() -> Unit)? = null, onClick:
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            // Squircle Avatar
             Surface(
                 modifier = Modifier.size(50.dp),
                 shape = RoundedCornerShape(14.dp),
@@ -304,9 +414,16 @@ fun EmployeeProgressItem(emp: Employee, onDelete: (() -> Unit)? = null, onClick:
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     val initials = if (emp.name.isNotBlank()) {
-                        emp.name.split(" ").mapNotNull { it.firstOrNull()?.toString() }.take(2).joinToString("")
-                    } else { "??" }
-                    Text(initials, color = MaterialTheme.colorScheme.onSecondaryContainer, fontWeight = FontWeight.Bold)
+                        emp.name.split(" ").mapNotNull { it.firstOrNull()?.toString() }.take(2)
+                            .joinToString("")
+                    } else {
+                        "??"
+                    }
+                    Text(
+                        initials,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
 
@@ -320,7 +437,6 @@ fun EmployeeProgressItem(emp: Employee, onDelete: (() -> Unit)? = null, onClick:
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(6.dp))
-                // Thicker, rounded progress bar
                 LinearProgressIndicator(
                     progress = { emp.performance.coerceIn(0f, 1f) },
                     modifier = Modifier
@@ -329,16 +445,20 @@ fun EmployeeProgressItem(emp: Employee, onDelete: (() -> Unit)? = null, onClick:
                         .clip(RoundedCornerShape(5.dp)),
                     trackColor = MaterialTheme.colorScheme.surfaceVariant,
                     color = when {
-                        emp.performance > 0.85f -> Color(0xFF00C853) // Vivid Green
-                        emp.performance > 0.6f -> Color(0xFFFFAB00)  // Vivid Orange
-                        else -> Color(0xFFD50000)                    // Vivid Red
+                        emp.performance > 0.85f -> Color(0xFF00C853)
+                        emp.performance > 0.6f -> Color(0xFFFFAB00)
+                        else -> Color(0xFFD50000)
                     }
                 )
             }
 
             if (onDelete != null) {
                 IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             } else {
                 Icon(
@@ -360,9 +480,9 @@ fun TaskItemRow(task: Task) {
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                imageVector = if(task.isCompleted) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                imageVector = if (task.isCompleted) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
                 contentDescription = null,
-                tint = if(task.isCompleted) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline
+                tint = if (task.isCompleted) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -370,7 +490,7 @@ fun TaskItemRow(task: Task) {
                     text = task.title,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
-                    color = if(task.isCompleted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                    color = if (task.isCompleted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
                     text = "ID: ${task.employeeId}",
@@ -383,54 +503,9 @@ fun TaskItemRow(task: Task) {
 }
 
 @Composable
-fun RecentActivityItem(item: ActivityItem) {
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            // Icon Background
-            Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.4f),
-                modifier = Modifier.size(40.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.NotificationsActive,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.tertiary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = item.title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = item.time,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-}
-
-@Composable
 fun SectionTitle(title: String, onViewAllClick: (() -> Unit)? = null) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -452,7 +527,6 @@ fun SectionTitle(title: String, onViewAllClick: (() -> Unit)? = null) {
     }
 }
 
-// --- DRAWER COMPONENTS (Kept simple but styled) ---
 @Composable
 fun DrawerHeader() {
     Column(
