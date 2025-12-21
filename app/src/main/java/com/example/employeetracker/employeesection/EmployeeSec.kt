@@ -30,7 +30,8 @@ import java.util.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EmployeeSec(
-    viewModel: EmployeeDashboardViewModel = hiltViewModel()
+    viewModel: EmployeeDashboardViewModel = hiltViewModel(),
+    onLogout: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -50,6 +51,15 @@ fun EmployeeSec(
                             uiState.employeeName,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onLogout) {
+                        Icon(
+                            imageVector = Icons.Default.Logout,
+                            contentDescription = "Logout",
+                            tint = MaterialTheme.colorScheme.error
                         )
                     }
                 },

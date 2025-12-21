@@ -82,11 +82,23 @@ class MainActivity : ComponentActivity() {
                     composable("employee_dashboard/{employeeId}") { backStackEntry ->
                         val employeeId = backStackEntry.arguments?.getString("employeeId")?.toLongOrNull() ?: 1L
                         val employeeViewModel: EmployeeDashboardViewModel = hiltViewModel()
+                        val userViewModel: UserViewModel = hiltViewModel()
+                        val passwordViewModel: PasswordViewModel = hiltViewModel()
 
                         // Set the employee ID in the ViewModel
                         employeeViewModel.setEmployeeId(employeeId)
 
-                        EmployeeSec(viewModel = employeeViewModel)
+                        EmployeeSec(
+                            viewModel = employeeViewModel,
+                            onLogout = {
+                                userViewModel.logout()
+                                passwordViewModel.logout()
+                                loginViewModel.resetState()
+                                navController.navigate("login") {
+                                    popUpTo("employee_dashboard/{employeeId}") { inclusive = true }
+                                }
+                            }
+                        )
                     }
 
                     // ADMIN DASHBOARD
