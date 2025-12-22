@@ -132,7 +132,7 @@ fun DashboardScreenMain(
     val scope = rememberCoroutineScope()
 
     val activityRepository: ActivityRepository = hiltViewModel<ActivityViewModel>().repository
-    val activities by activityRepository.getRecentActivities().collectAsState(initial = emptyList())
+    val activities by activityRepository.getAllActivities().collectAsState(initial = emptyList())
 
 
     val context = LocalContext.current
@@ -215,7 +215,7 @@ fun DashboardScreenMain(
                         modifier = Modifier.padding(paddingValues),
                         employees = employees,
                         tasks = tasks,
-                        activities = activities, // ✅ ADD THIS LINE
+                        activities = activities,
                         onGoToEmployeesScreen = { selectedScreen = DashboardScreen.Employees },
                         onGoToRecentActivityScreen = { selectedScreen = DashboardScreen.RecentActivity },
                         onEmployeeClick = { employee -> selectedScreen = DashboardScreen.EmployeeDetail(employee) }
@@ -234,7 +234,7 @@ fun DashboardScreenMain(
                         modifier = Modifier.padding(paddingValues),
                         tasks = tasks,
                         employees = employees,
-                        onAddTask = { title, employeeId -> taskViewModel.addTask(title, employeeId) },
+                        onAddTask = { title, description, employeeId -> taskViewModel.addTask(title, description, employeeId) },
                         onDeleteTask = { task -> taskViewModel.deleteTask(task) },
                         onUpdateTaskStatus = { task, isCompleted -> taskViewModel.updateTaskStatus(task, isCompleted) },
                         errorMessage = taskAssignmentError,
@@ -259,7 +259,10 @@ fun DashboardScreenMain(
                         onNavigateToChangePassword = { selectedScreen = DashboardScreen.ChangePassword },
                         onBack = { selectedScreen = DashboardScreen.Overview }
                     )
-                    DashboardScreen.RecentActivity -> RecentActivityScreen(onBack = { selectedScreen = DashboardScreen.Overview })
+                    DashboardScreen.RecentActivity -> RecentActivityScreen(
+                        modifier = Modifier.padding(paddingValues),
+                        onBack = { selectedScreen = DashboardScreen.Overview }
+                    )
                     DashboardScreen.Profile -> ProfileScreen(
                         userViewModel = userViewModel,
                         onBack = { selectedScreen = DashboardScreen.Overview },

@@ -19,12 +19,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.employeetracker.models.Activity
 import com.example.employeetracker.models.ActivityType
 import com.example.employeetracker.models.Employee
 import com.example.employeetracker.models.Task
-import com.example.employeetracker.data.repository.ActivityRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -100,7 +98,7 @@ fun OverviewPage(
     modifier: Modifier = Modifier,
     employees: List<Employee>,
     tasks: List<Task>,
-    activities: List<Activity> = emptyList(), // ✅ NEW: Real activities from database
+    activities: List<Activity> = emptyList(),
     onGoToEmployeesScreen: () -> Unit,
     onGoToRecentActivityScreen: () -> Unit,
     onEmployeeClick: (Employee) -> Unit
@@ -119,7 +117,6 @@ fun OverviewPage(
         tasks
     }
 
-    // Calculate real KPIs from database
     val avgPerformance = if (employees.isNotEmpty()) {
         (employees.sumOf { it.performance.toDouble() } / employees.size * 100).toInt()
     } else 0
@@ -137,13 +134,10 @@ fun OverviewPage(
         verticalArrangement = Arrangement.spacedBy(20.dp),
         contentPadding = PaddingValues(top = 16.dp, bottom = 32.dp)
     ) {
-
-        // 1. Search Bar
         item {
             SearchBar(query = searchQuery, onQueryChange = { searchQuery = it })
         }
 
-        // 2. Dashboard Widgets (Only when not searching)
         if (searchQuery.isBlank()) {
             item {
                 SectionTitle("Overview", null)
@@ -185,12 +179,8 @@ fun OverviewPage(
                 EmployeeProgressItem(emp = employee, onClick = { onEmployeeClick(employee) })
             }
 
-            // ✅ Real Recent Activity from Database
             item { SectionTitle("Recent Activity", onViewAllClick = onGoToRecentActivityScreen) }
-            items(activities.take(5)) { activity ->
-                RealActivityItem(activity = activity)
-            }
-
+            
             if (activities.isEmpty()) {
                 item {
                     Card(
@@ -211,9 +201,12 @@ fun OverviewPage(
                         }
                     }
                 }
+            } else {
+                items(activities.take(5)) { activity ->
+                    RealActivityItem(activity = activity)
+                }
             }
         } else {
-            // 3. Search Results
             if (filteredEmployees.isNotEmpty()) {
                 item { SectionTitle("Employees") }
                 items(filteredEmployees) { employee ->
@@ -252,7 +245,6 @@ fun OverviewPage(
     }
 }
 
-// ✅ NEW: Real Activity Item with database data
 @Composable
 fun RealActivityItem(activity: Activity) {
     val icon = when (activity.type) {
@@ -300,23 +292,33 @@ fun RealActivityItem(activity: Activity) {
                 Text(
                     text = activity.title,
                     style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                if (activity.description.isNotEmpty()) {
+                    Text(
+                        text = activity.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 Text(
                     text = getTimeAgo(activity.timestamp),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.outline
                 )
             }
         }
     }
 }
 
-// Helper function to get "time ago" format
 fun getTimeAgo(date: Date): String {
-    val now = Date()
-    val diff = now.time - date.time
+    val now = System.currentTimeMillis()
+    val time = date.time
+    val diff = now - time
+
+    // Fix for future or slightly off-sync clocks (showing "Just now" instead of "9 hr ago" or future)
+    if (diff < 0) return "Just now"
 
     return when {
         diff < TimeUnit.MINUTES.toMillis(1) -> "Just now"
@@ -327,7 +329,6 @@ fun getTimeAgo(date: Date): String {
     }
 }
 
-// ✅ Real KPI Card with actual data
 @Composable
 fun RealKpiCard(
     title: String,
@@ -438,7 +439,7 @@ fun EmployeeProgressItem(emp: Employee, onDelete: (() -> Unit)? = null, onClick:
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 LinearProgressIndicator(
-                    progress = { emp.performance.coerceIn(0f, 1f) },
+                    progress = { (emp.performance).coerceIn(0f, 1f) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(10.dp)

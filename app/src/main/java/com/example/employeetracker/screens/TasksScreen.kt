@@ -30,7 +30,7 @@ fun TasksScreen(
     modifier: Modifier = Modifier,
     tasks: List<Task>,
     employees: List<Employee>,
-    onAddTask: (String, Long) -> Unit,
+    onAddTask: (String, String, Long) -> Unit,
     onDeleteTask: (Task) -> Unit,
     onUpdateTaskStatus: (Task, Boolean) -> Unit,
     errorMessage: String?,
@@ -110,8 +110,8 @@ fun TasksScreen(
             AddTaskDialog(
                 employees = employees,
                 onAddTask = {
-                    title, employeeId ->
-                    onAddTask(title, employeeId)
+                    title, description, employeeId ->
+                    onAddTask(title, description, employeeId)
                     showDialog = false
                 },
                 onDismiss = {
@@ -162,8 +162,16 @@ fun TaskCard(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = if (task.isCompleted) FontWeight.Normal else FontWeight.SemiBold,
                     color = if (task.isCompleted) MaterialTheme.colorScheme.onSurface.copy(alpha=0.6f) else MaterialTheme.colorScheme.onSurface,
-                    // textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null // Optional: Strikethrough
                 )
+
+                if (task.description.isNotBlank()) {
+                    Text(
+                        text = task.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(4.dp))
 
@@ -216,11 +224,12 @@ fun TaskCard(
 @Composable
 fun AddTaskDialog(
     employees: List<Employee>,
-    onAddTask: (String, Long) -> Unit,
+    onAddTask: (String, String, Long) -> Unit,
     onDismiss: () -> Unit,
     errorMessage: String?
 ) {
     var title by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
     var selectedEmployee by remember { mutableStateOf<Employee?>(null) }
 
@@ -263,13 +272,31 @@ fun AddTaskDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Input: Description
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Description") },
+                    placeholder = { Text("Add details about the task...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    minLines = 2,
+                    maxLines = 4,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha=0.5f)
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
                 // Input: Dropdown
                 ExposedDropdownMenuBox(
                     expanded = expanded,
                     onExpandedChange = { expanded = !expanded },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    OutlinedTextField( // Changed to OutlinedTextField for consistency
+                    OutlinedTextField(
                         value = selectedEmployee?.name ?: "",
                         onValueChange = {},
                         readOnly = true,
@@ -326,7 +353,7 @@ fun AddTaskDialog(
                         onClick = {
                             val assignedToId = selectedEmployee?.id
                             if (title.isNotBlank() && assignedToId != null) {
-                                onAddTask(title, assignedToId)
+                                onAddTask(title, description, assignedToId)
                             }
                         },
                         shape = RoundedCornerShape(8.dp)

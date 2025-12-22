@@ -10,7 +10,7 @@ import com.example.employeetracker.models.Task
 
 @Database(
     entities = [Employee::class, AttendanceRecord::class, Task::class, Activity::class],
-    version = 7, // ✅ INCREMENTED from 6 to 7
+    version = 8,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -19,5 +19,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun employeeDao(): EmployeeDao
     abstract fun attendanceRecordDao(): AttendanceRecordDao
     abstract fun taskDao(): TaskDao
-    abstract fun activityDao(): ActivityDao // ✅ NEW
+    abstract fun activityDao(): ActivityDao
 }

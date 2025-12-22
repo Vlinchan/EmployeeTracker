@@ -11,6 +11,8 @@ class EmployeeRepository @Inject constructor(private val employeeDao: EmployeeDa
 
     suspend fun getEmployeeByName(name: String): Employee? = employeeDao.getEmployeeByName(name)
 
+    suspend fun getEmployeeById(id: Long): Employee? = employeeDao.getEmployeeById(id)
+
     suspend fun insertEmployee(employee: Employee) {
         employeeDao.insertEmployee(employee)
     }

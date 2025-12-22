@@ -15,12 +15,13 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index(value = ["employeeId"])] // ✅ ADDED INDEX for foreign key
+    indices = [Index(value = ["employeeId"])]
 )
 data class Task(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val title: String,
+    val description: String = "",
     val employeeId: Long,
     var isCompleted: Boolean = false
 )

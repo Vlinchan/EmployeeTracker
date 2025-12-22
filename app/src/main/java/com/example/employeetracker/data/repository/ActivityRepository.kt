@@ -8,6 +8,8 @@ import javax.inject.Inject
 class ActivityRepository @Inject constructor(
     private val activityDao: ActivityDao
 ) {
+    fun getAllActivities(): Flow<List<Activity>> = activityDao.getAllActivities()
+    
     fun getRecentActivities(): Flow<List<Activity>> = activityDao.getRecentActivities()
 
     suspend fun addActivity(activity: Activity) {

@@ -9,6 +9,9 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ActivityDao {
+    @Query("SELECT * FROM activities ORDER BY timestamp DESC")
+    fun getAllActivities(): Flow<List<Activity>>
+
     @Query("SELECT * FROM activities ORDER BY timestamp DESC LIMIT 10")
     fun getRecentActivities(): Flow<List<Activity>>
 

@@ -14,7 +14,8 @@ class Converters {
 
     @TypeConverter
     fun dateToTimestamp(date: Date?): Long? {
-        return date?.let { getNormalizedDate(it).time }
+        // Return original date time to preserve hours/minutes for activities
+        return date?.time
     }
 
     @TypeConverter
@@ -27,7 +28,7 @@ class Converters {
         return status?.name
     }
 
-    // ✅ NEW: ActivityType converters
+    // ActivityType converters
     @TypeConverter
     fun fromActivityType(value: String?): ActivityType? {
         return value?.let { ActivityType.valueOf(it) }

@@ -15,6 +15,9 @@ interface EmployeeDao {
     @Query("SELECT * FROM employees WHERE name = :name LIMIT 1")
     suspend fun getEmployeeByName(name: String): Employee?
 
+    @Query("SELECT * FROM employees WHERE id = :id LIMIT 1")
+    suspend fun getEmployeeById(id: Long): Employee?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEmployee(employee: Employee)
 

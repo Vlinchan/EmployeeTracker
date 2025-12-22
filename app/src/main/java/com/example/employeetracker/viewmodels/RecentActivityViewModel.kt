@@ -15,7 +15,8 @@ class RecentActivityViewModel @Inject constructor(
     activityRepository: ActivityRepository
 ) : ViewModel() {
 
-    val activities: StateFlow<List<Activity>> = activityRepository.getRecentActivities()
+    // Use getAllActivities() to show everything in the "View All" screen
+    val activities: StateFlow<List<Activity>> = activityRepository.getAllActivities()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
